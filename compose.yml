@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: meter-postgres
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: meter_test
+      POSTGRES_USER: meter
+      POSTGRES_PASSWORD: meter_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - meter-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meter -d meter_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  meter-postgres-data:

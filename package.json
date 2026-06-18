@@ -1,0 +1,65 @@
+{
+  "name": "@prsm/meter",
+  "version": "1.0.0",
+  "description": "Durable usage metering for billing and quotas, backed by postgres",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./postgres": {
+      "types": "./types/postgresDriver.d.ts",
+      "default": "./src/postgresDriver.js"
+    },
+    "./memory": {
+      "types": "./types/memoryDriver.d.ts",
+      "default": "./src/memoryDriver.js"
+    }
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "src",
+    "types"
+  ],
+  "scripts": {
+    "test": "vitest --reporter=verbose --run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npx tsc --declaration --allowJs --emitDeclarationOnly --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --strict false --esModuleInterop true --outDir ./types src/index.js src/postgresDriver.js src/memoryDriver.js"
+  },
+  "keywords": [
+    "metering",
+    "usage",
+    "billing",
+    "quota",
+    "postgres"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prsmjs/meter.git"
+  },
+  "homepage": "https://github.com/prsmjs/meter#readme",
+  "bugs": {
+    "url": "https://github.com/prsmjs/meter/issues"
+  },
+  "dependencies": {
+    "@prsm/ms": "^2.0.0"
+  },
+  "peerDependencies": {
+    "pg": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "pg": "^8.16.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
