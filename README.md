@@ -138,6 +138,10 @@ Reads current usage and compares it to `limit`, returning `{ allowed, used, rema
 
 Returns a `usage` entry for every declared metric in the current billing period, including metrics with no usage (reported as `0`). Built for a usage dashboard or an invoice.
 
+### `meter.rebuild({ subject? })`
+
+Recomputes the materialized aggregate table from the event log for every declared metric. The events are the source of truth and the aggregates are a cache, so this is how you recover from a dropped or drifted aggregate table. Pass `subject` to rebuild a single subject instead of the whole table. Idempotent.
+
 ### `meter.close()`
 
 Releases driver resources.
@@ -147,7 +151,7 @@ Releases driver resources.
 Three postgres tables, prefixed `meter_` by default (pass `prefix` to `postgresDriver` to run several meters in one database):
 
 - `meter_events` is the append-only log of every recorded event. It is the source of truth, so "why was I charged this?" is always answerable.
-- `meter_aggregates` holds the materialized per-(subject, metric, period) rollups, updated atomically alongside each event insert. It is derived data: drop it and it rebuilds from the log.
+- `meter_aggregates` holds the materialized per-(subject, metric, period) rollups, updated atomically alongside each event insert. It is derived data: if it is ever dropped or suspected of drift, `meter.rebuild()` recomputes it from the event log.
 - `meter_unique_members` backs exact distinct counting for `unique` metrics.
 
 There is no in-process buffering and no write-behind queue, so a crash cannot drop an event that a `record` call already acknowledged. On restart, reads come straight from postgres; there is no cache to warm.

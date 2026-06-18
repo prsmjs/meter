@@ -162,6 +162,63 @@ export function postgresDriver(options = {}) {
       return out
     },
 
+    async rebuild({ entries, subject }) {
+      const expr = {
+        sum: `coalesce(sum(quantity), 0)`,
+        max: `coalesce(max(quantity), 0)`,
+        last: `(array_agg(quantity order by at desc, id desc))[1]`,
+        unique: `count(distinct member)`,
+      }
+      const byType = { sum: [], max: [], last: [], unique: [] }
+      for (const e of entries) byType[e.aggregate].push(e.metric)
+      const allMetrics = entries.map((e) => e.metric)
+      if (allMetrics.length === 0) return
+
+      const scoped = subject != null
+      const scopeClause = scoped ? " and subject = $2" : ""
+
+      const client = await pool.connect()
+      try {
+        await client.query("begin")
+        await client.query(
+          `delete from ${aggs} where metric = any($1)${scopeClause}`,
+          scoped ? [allMetrics, subject] : [allMetrics],
+        )
+
+        if (byType.unique.length) {
+          await client.query(
+            `delete from ${uniqueMembers} where metric = any($1)${scopeClause}`,
+            scoped ? [byType.unique, subject] : [byType.unique],
+          )
+          await client.query(
+            `insert into ${uniqueMembers} (subject, metric, bucket, member)
+             select distinct subject, metric, bucket, member from ${events}
+             where metric = any($1) and member is not null${scopeClause}`,
+            scoped ? [byType.unique, subject] : [byType.unique],
+          )
+        }
+
+        for (const [type, metrics] of Object.entries(byType)) {
+          if (!metrics.length) continue
+          await client.query(
+            `insert into ${aggs} (subject, metric, bucket, aggregate, event_count, last_at, updated_at)
+             select subject, metric, bucket, ${expr[type]}, count(*), max(at), now()
+             from ${events}
+             where metric = any($1)${scopeClause}
+             group by subject, metric, bucket`,
+            scoped ? [metrics, subject] : [metrics],
+          )
+        }
+
+        await client.query("commit")
+      } catch (err) {
+        await client.query("rollback").catch(() => {})
+        throw err
+      } finally {
+        client.release()
+      }
+    },
+
     async close() {},
   }
 }

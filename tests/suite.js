@@ -105,5 +105,44 @@ export function runMeterSuite(label, makeDriver) {
       await expect(meter.record({ subject: "a", metric: "active_users", quantity: 1 })).rejects.toThrow(/unique/)
       await expect(meter.record({ subject: "a", metric: "tokens", value: "x" })).rejects.toThrow(/quantity/)
     })
+
+    async function recordMix(subject) {
+      const base = Date.now()
+      for (const q of [100, 50, 25]) await meter.record({ subject, metric: "tokens", quantity: q })
+      for (const q of [3, 7, 2]) await meter.record({ subject, metric: "seats", quantity: q })
+      await meter.record({ subject, metric: "storage", quantity: 10, at: new Date(base) })
+      await meter.record({ subject, metric: "storage", quantity: 5, at: new Date(base + 2000) })
+      await meter.record({ subject, metric: "storage", quantity: 99, at: new Date(base + 1000) })
+      for (const v of ["u1", "u2", "u1", "u3"]) await meter.record({ subject, metric: "active_users", value: v })
+      await meter.record({ subject, metric: "api_calls", quantity: 10, idempotencyKey: `${subject}-k1` })
+      await meter.record({ subject, metric: "api_calls", quantity: 10, idempotencyKey: `${subject}-k1` })
+    }
+
+    const MIX = { api_calls: 10, tokens: 175, seats: 7, storage: 5, active_users: 3 }
+    const asMap = (summary) => Object.fromEntries(summary.map((s) => [s.metric, s.quantity]))
+
+    it("rebuilds the materialized aggregates from the event log", async () => {
+      await recordMix("a")
+      expect(asMap(await meter.summary({ subject: "a" }))).toEqual(MIX)
+      await meter.rebuild()
+      expect(asMap(await meter.summary({ subject: "a" }))).toEqual(MIX)
+    })
+
+    it("rebuilds a single subject without touching others", async () => {
+      await recordMix("a")
+      await recordMix("b")
+      await meter.rebuild({ subject: "a" })
+      expect(asMap(await meter.summary({ subject: "a" }))).toEqual(MIX)
+      expect(asMap(await meter.summary({ subject: "b" }))).toEqual(MIX)
+    })
+
+    it("keeps unique counts exact across a rebuild", async () => {
+      await recordMix("a")
+      await meter.rebuild()
+      await meter.record({ subject: "a", metric: "active_users", value: "u1" })
+      expect((await meter.usage({ subject: "a", metric: "active_users" })).quantity).toBe(3)
+      await meter.record({ subject: "a", metric: "active_users", value: "u4" })
+      expect((await meter.usage({ subject: "a", metric: "active_users" })).quantity).toBe(4)
+    })
   })
 }

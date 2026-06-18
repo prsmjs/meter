@@ -1,4 +1,4 @@
-import { resolveWindow, bucketKey, isCalendarPeriod, CALENDAR_UNITS } from "./period.js"
+import { resolveWindow, bucketKey, CALENDAR_UNITS } from "./period.js"
 
 /**
  * @typedef {"sum"|"max"|"last"|"unique"} Aggregate
@@ -218,6 +218,26 @@ export function createMeter(options = {}) {
         unit: def.unit,
         aggregate: def.aggregate,
       }))
+    },
+
+    /**
+     * Rederive the materialized aggregates from the event log. The event table
+     * is the source of truth; the aggregate table is a cache maintained on each
+     * `record`. If it is ever dropped, truncated, or suspected of drift, this
+     * recomputes it for every declared metric. Pass `subject` to rebuild a
+     * single subject instead of the whole table. Idempotent.
+     * @param {{ subject?: string }} [options]
+     * @returns {Promise<void>}
+     */
+    async rebuild(options = {}) {
+      const { subject = null } = options
+      if (!driver.rebuild) {
+        throw new Error("this driver does not support rebuild")
+      }
+      const entries = Object.entries(catalog).map(([metric, def]) => ({ metric, aggregate: def.aggregate }))
+      await traced(tracer, "meter.rebuild", subject ? { "meter.subject": subject } : {}, () =>
+        driver.rebuild({ entries, subject }),
+      )
     },
 
     /** Release backing resources (driver connections). */
