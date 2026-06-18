@@ -37,28 +37,28 @@ import { resolveWindow, bucketKey, CALENDAR_UNITS } from "./period.js"
 
 /**
  * @typedef {Object} UsageQuery
- * @property {string} subject
- * @property {string} metric
- * @property {import("./period.js").Period} [period] - calendar keyword or duration (default: the meter's configured granularity, served from the materialized aggregate)
- * @property {import("./period.js").Range} [range] - explicit `{ start, end }` window; takes precedence over `period`
+ * @property {string} subject - who the usage belongs to (account, tenant, or user id), the same identifier passed to `record`
+ * @property {string} metric - a key from the metric catalog; querying an undeclared metric throws
+ * @property {import("./period.js").Period} [period] - calendar keyword or duration to scope the query (default: the meter's configured granularity, served from the materialized aggregate fast path)
+ * @property {import("./period.js").Range} [range] - explicit `{ start, end }` window for a fixed cycle; when present it takes precedence over `period` and reads from the event log
  */
 
 /**
  * @typedef {Object} Usage
- * @property {string} metric
- * @property {number} quantity - the aggregated value over the window
- * @property {string} unit
- * @property {Aggregate} aggregate
+ * @property {string} metric - the metric this entry reports on
+ * @property {number} quantity - the aggregated value over the window, combined according to the metric's `aggregate`
+ * @property {string} unit - the metric's descriptive unit label, carried through from its catalog definition
+ * @property {Aggregate} aggregate - how the quantity was combined (`sum`, `max`, `last`, or `unique`)
  */
 
 /**
  * @typedef {Object} CheckResult
- * @property {boolean} allowed - whether current usage is below `limit`
+ * @property {boolean} allowed - whether current usage is strictly below `limit` (the check is exclusive, so reaching exactly the limit is not allowed)
  * @property {number} used - current usage over the window
- * @property {number} remaining - `max(0, limit - used)`
- * @property {number} limit
- * @property {string} unit
- * @property {string} metric
+ * @property {number} remaining - headroom left before the limit, computed as `max(0, limit - used)`
+ * @property {number} limit - the quota the usage was compared against, echoed back from the query
+ * @property {string} unit - the metric's unit label, for rendering the result
+ * @property {string} metric - the metric that was checked
  */
 
 const AGGREGATES = new Set(["sum", "max", "last", "unique"])

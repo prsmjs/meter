@@ -1,7 +1,7 @@
 /**
  * @typedef {Object} PostgresDriverOptions
- * @property {import("pg").Pool} pool - a `pg` Pool
- * @property {string} [prefix] - table name prefix (default `"meter"`), for keeping several meters in one database
+ * @property {import("pg").Pool} pool - a connected `pg` Pool the driver runs all queries through; the caller owns its lifecycle
+ * @property {string} [prefix] - prefix for the three backing table names (default `"meter"`, producing `meter_events`, `meter_aggregates`, `meter_unique_members`); use distinct prefixes to run several independent meters in one database
  */
 
 /**
