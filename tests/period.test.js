@@ -56,6 +56,21 @@ describe("resolveWindow", () => {
     expect(resolveWindow({ period: "1 year" }, now).start.toISOString()).toBe("2025-06-18T14:30:45.123Z")
   })
 
+  it("clamps to the last valid day when the target month is shorter", () => {
+    const mar31 = new Date("2026-03-31T12:00:00.000Z")
+    expect(resolveWindow({ period: "1 month" }, mar31).start.toISOString()).toBe("2026-02-28T12:00:00.000Z")
+    const may31 = new Date("2026-05-31T12:00:00.000Z")
+    expect(resolveWindow({ period: "1 month" }, may31).start.toISOString()).toBe("2026-04-30T12:00:00.000Z")
+    // a leap day one year back has no counterpart, so it clamps to Feb 28
+    const feb29 = new Date("2024-02-29T12:00:00.000Z")
+    expect(resolveWindow({ period: "1 year" }, feb29).start.toISOString()).toBe("2023-02-28T12:00:00.000Z")
+  })
+
+  it("does not clamp when the target month is long enough", () => {
+    const mar31 = new Date("2026-03-31T12:00:00.000Z")
+    expect(resolveWindow({ period: "2 months" }, mar31).start.toISOString()).toBe("2026-01-31T12:00:00.000Z")
+  })
+
   it("distinguishes the calendar keyword from the duration of the same name", () => {
     expect(resolveWindow({ period: "month" }, now).start.toISOString()).toBe("2026-06-01T00:00:00.000Z")
     expect(resolveWindow({ period: "1 month" }, now).start.toISOString()).toBe("2026-05-18T14:30:45.123Z")

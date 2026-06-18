@@ -16,8 +16,9 @@ import ms from "@prsm/ms"
  * parsed by `@prsm/ms` (`"15m"`, `"90 days"`, `"3 weeks"`, even compound forms
  * like `"1h 30m"`). Months and years use calendar arithmetic rather than a fixed
  * number of milliseconds, because they are not fixed-length: `"2 months"` is the
- * same day-of-month two calendar months ago through now. Examples: `"15m"`,
- * `"30 days"`, `"2 months"`, `"1 year"`.
+ * same day-of-month two calendar months ago through now. When the target month
+ * has no such day (one month before March 31), the start clamps to that month's
+ * last day (February 28). Examples: `"15m"`, `"30 days"`, `"2 months"`, `"1 year"`.
  */
 
 /**
@@ -126,8 +127,14 @@ export function bucketStart(unit, date) {
 
 function subtractCalendar(date, count, unit) {
   const { y, mo, d, h, mi } = utcParts(date)
-  if (unit === "month") return new Date(Date.UTC(y, mo - count, d, h, mi, date.getUTCSeconds(), date.getUTCMilliseconds()))
-  return new Date(Date.UTC(y - count, mo, d, h, mi, date.getUTCSeconds(), date.getUTCMilliseconds()))
+  const targetYear = unit === "year" ? y - count : y
+  const targetMonth = unit === "year" ? mo : mo - count
+  // clamp to the last valid day of the target month so a window ending on a day
+  // the target month lacks (one month before March 31) lands on that month's
+  // last day (February 28) instead of overflowing into the next month
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate()
+  const day = Math.min(d, lastDay)
+  return new Date(Date.UTC(targetYear, targetMonth, day, h, mi, date.getUTCSeconds(), date.getUTCMilliseconds()))
 }
 
 /**

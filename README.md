@@ -100,7 +100,7 @@ const mau = await meter.usage({ subject: account.id, metric: "active_users" })
 `usage` and `check` scope to a window in one of three ways:
 
 - a **calendar keyword** (`"minute"`, `"hour"`, `"day"`, `"week"`, `"month"`, `"year"`) selects the current calendar bucket and resets at its UTC boundary. `"month"` means "this month so far." This is the materialized fast path and the default (it matches the meter's configured `period`).
-- a **duration** (`"30 days"`, `"15m"`, `"2 months"`) selects a rolling window ending now, aggregated from the event log. Sub-month spans are parsed by [@prsm/ms](https://www.npmjs.com/package/@prsm/ms); months and years use calendar arithmetic, so `"2 months"` is the same day two calendar months ago through now.
+- a **duration** (`"30 days"`, `"15m"`, `"2 months"`) selects a rolling window ending now, aggregated from the event log. Sub-month spans are parsed by [@prsm/ms](https://www.npmjs.com/package/@prsm/ms); months and years use calendar arithmetic, so `"2 months"` is the same day two calendar months ago through now. When the target month has no such day (a `"1 month"` window ending March 31), the start clamps to that month's last day (February 28).
 - an explicit **range** `{ start, end }` for a fixed window such as a past month or an anniversary billing cycle. Ranges are half-open, so adjacent periods tile without double-counting a boundary event.
 
 ```js
