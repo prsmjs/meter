@@ -152,6 +152,15 @@ export function postgresDriver(options = {}) {
       return Number(r.rows[0].value)
     },
 
+    async subjects({ limit }) {
+      const r = await pool.query(
+        `select subject, max(updated_at) as last_at from ${aggs}
+         group by subject order by last_at desc, subject asc limit $1`,
+        [limit],
+      )
+      return r.rows.map((row) => ({ subject: row.subject, lastActivityAt: row.last_at }))
+    },
+
     async summary({ subject, bucket }) {
       const r = await pool.query(
         `select metric, aggregate from ${aggs} where subject = $1 and bucket = $2`,

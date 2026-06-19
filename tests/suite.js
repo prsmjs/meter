@@ -106,6 +106,18 @@ export function runMeterSuite(label, makeDriver) {
       expect(summary.find((s) => s.metric === "tokens").unit).toBe("tokens")
     })
 
+    it("lists subjects that have recorded usage, bounded by limit", async () => {
+      expect(await meter.subjects()).toEqual([])
+      await meter.record({ subject: "a", metric: "tokens", quantity: 1 })
+      await meter.record({ subject: "b", metric: "tokens", quantity: 1 })
+      await meter.record({ subject: "c", metric: "active_users", value: "u1" })
+      const all = await meter.subjects()
+      expect(all.map((s) => s.subject).sort()).toEqual(["a", "b", "c"])
+      expect(all.every((s) => s.lastActivityAt instanceof Date)).toBe(true)
+      const capped = await meter.subjects({ limit: 2 })
+      expect(capped).toHaveLength(2)
+    })
+
     it("rejects an unknown metric", async () => {
       await expect(meter.record({ subject: "a", metric: "nope", quantity: 1 })).rejects.toThrow(/unknown metric/)
     })

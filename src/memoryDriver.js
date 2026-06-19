@@ -10,6 +10,7 @@ export function memoryDriver() {
   const seenKeys = new Set()
   const aggregates = new Map()
   const members = new Map()
+  const subjectActivity = new Map()
 
   // NUL separator so the composite map key stays injective even when a subject,
   // metric, or bucket contains spaces or other delimiters
@@ -54,7 +55,15 @@ export function memoryDriver() {
       }
       if (idempotencyKey != null) seenKeys.add(idempotencyKey)
       events.push({ subject, metric, quantity, member, at, bucket })
+      subjectActivity.set(subject, new Date())
       return { quantity: applyAggregate(subject, metric, bucket, aggregate, quantity, member, at) }
+    },
+
+    async subjects({ limit }) {
+      return [...subjectActivity.entries()]
+        .sort((a, b) => b[1].getTime() - a[1].getTime() || (a[0] < b[0] ? -1 : 1))
+        .slice(0, limit)
+        .map(([subject, lastActivityAt]) => ({ subject, lastActivityAt }))
     },
 
     async readBucket({ subject, metric, bucket }) {

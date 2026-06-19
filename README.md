@@ -138,6 +138,10 @@ Reads current usage and compares it to `limit`, returning `{ allowed, used, rema
 
 Returns a `usage` entry for every declared metric in the current billing period, including metrics with no usage (reported as `0`). Built for a usage dashboard or an invoice.
 
+### `meter.subjects({ limit? })`
+
+Lists subjects that have recorded usage, most-recently-active first, capped at `limit` (default `100`). A ledger can hold an unbounded number of subjects, so this is built for discovery in dashboards and admin tools, not for iterating the whole table. Returns `[{ subject, lastActivityAt }]`.
+
 ### `meter.catalog()`
 
 Returns the meter's static configuration: `{ period, metrics }`, where `metrics` maps each declared metric name to its `{ unit, aggregate }`. Subject-independent and read-only, so it never touches storage. Use it to render a usage dashboard, drive admin tooling, or document what a meter tracks without first picking a subject. The returned object is a fresh copy.

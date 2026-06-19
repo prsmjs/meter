@@ -225,6 +225,19 @@ export function createMeter(options = {}) {
     },
 
     /**
+     * List subjects that have recorded usage, most-recently-active first, capped
+     * at `limit` (default 100). A ledger can hold an unbounded number of
+     * subjects, so this is for discovery in dashboards and admin tools, not for
+     * iterating the whole table.
+     * @param {{ limit?: number }} [query]
+     * @returns {Promise<Array<{ subject: string, lastActivityAt: Date }>>}
+     */
+    async subjects(query = {}) {
+      if (!driver.subjects) throw new Error("this driver does not support listing subjects")
+      return driver.subjects({ limit: query.limit ?? 100 })
+    },
+
+    /**
      * All declared metrics for a subject in the current billing period, ready
      * for a usage dashboard or an invoice. Metrics with no usage report `0`.
      * @param {{ subject: string }} query
