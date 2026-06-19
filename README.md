@@ -138,6 +138,10 @@ Reads current usage and compares it to `limit`, returning `{ allowed, used, rema
 
 Returns a `usage` entry for every declared metric in the current billing period, including metrics with no usage (reported as `0`). Built for a usage dashboard or an invoice.
 
+### `meter.catalog()`
+
+Returns the meter's static configuration: `{ period, metrics }`, where `metrics` maps each declared metric name to its `{ unit, aggregate }`. Subject-independent and read-only, so it never touches storage. Use it to render a usage dashboard, drive admin tooling, or document what a meter tracks without first picking a subject. The returned object is a fresh copy.
+
 ### `meter.rebuild({ subject? })`
 
 Recomputes the materialized aggregate table from the event log for every declared metric. The events are the source of truth and the aggregates are a cache, so this is how you recover from a dropped or drifted aggregate table. Pass `subject` to rebuild a single subject instead of the whole table. Idempotent.

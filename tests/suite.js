@@ -29,6 +29,15 @@ export function runMeterSuite(label, makeDriver) {
       await meter.close()
     })
 
+    it("exposes its static catalog without leaking internal state", () => {
+      const cat = meter.catalog()
+      expect(cat).toEqual({ period: "month", metrics: CATALOG })
+      cat.metrics.tokens.unit = "mutated"
+      cat.period = "year"
+      expect(meter.catalog().metrics.tokens.unit).toBe("tokens")
+      expect(meter.catalog().period).toBe("month")
+    })
+
     it("sums quantities and returns the new aggregate", async () => {
       await meter.record({ subject: "a", metric: "tokens", quantity: 100 })
       const r = await meter.record({ subject: "a", metric: "tokens", quantity: 50 })

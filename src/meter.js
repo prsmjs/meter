@@ -52,6 +52,12 @@ import { resolveWindow, bucketKey, CALENDAR_UNITS } from "./period.js"
  */
 
 /**
+ * @typedef {Object} Catalog
+ * @property {import("./period.js").CalendarPeriod} period - the billing granularity this meter materializes for fast reads
+ * @property {Record<string, MetricDef>} metrics - the declared metric catalog, keyed by metric name
+ */
+
+/**
  * @typedef {Object} CheckResult
  * @property {boolean} allowed - whether current usage is strictly below `limit` (the check is exclusive, so reaching exactly the limit is not allowed)
  * @property {number} used - current usage over the window
@@ -118,6 +124,23 @@ export function createMeter(options = {}) {
     /** Create the backing tables if they do not exist. Idempotent. */
     setup() {
       return driver.setup()
+    },
+
+    /**
+     * The static configuration of this meter: its period and declared metric
+     * catalog. Read-only and subject-independent, so it never touches storage -
+     * for building usage dashboards, admin tooling, or documenting what a meter
+     * tracks. The returned object is a fresh copy; mutating it does not affect
+     * the meter.
+     * @returns {Catalog}
+     */
+    catalog() {
+      return {
+        period,
+        metrics: Object.fromEntries(
+          Object.entries(catalog).map(([name, def]) => [name, { unit: def.unit, aggregate: def.aggregate }]),
+        ),
+      }
     },
 
     /**
